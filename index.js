@@ -78,21 +78,25 @@ async function handleRequest(request) {
             let queries = [];
             let count = 0;
             const matches = lastMessageContent.match(/WS\[([^\]]+)\]/g);
-            for (let match of matches) {
-                const query = match.slice(3, -1);
-                if (count < 2) {
-                    queries.push(query);
-                    count++;
-                }
-            }
-            count = 0;
-            if (lastSecondUserMessage) {
-                const matches2 = lastSecondUserMessageContent.match(/WS\[([^\]]+)\]/g);
-                for (let match of matches2) {
+            if (matches) {
+                for (let match of matches) {
                     const query = match.slice(3, -1);
                     if (count < 2) {
                         queries.push(query);
                         count++;
+                    }
+                }
+            }
+            count = 0;
+            if (lastSecondUserMessageContent) {
+                const matches2 = lastSecondUserMessageContent.match(/WS\[([^\]]+)\]/g);
+                if (matches2) {
+                    for (let match of matches2) {
+                        const query = match.slice(3, -1);
+                        if (count < 2) {
+                            queries.push(query);
+                            count++;
+                        }
                     }
                 }
             }
@@ -101,13 +105,15 @@ async function handleRequest(request) {
             if (queries.length <= 2) {
                 limit = 4;
             }
-            for (let query of queries) {
-                const searchUrl = `https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`;
-                const searchResponse = await fetch(searchUrl);
-                const searchResults = await searchResponse.json();
-                const currentSnippet = searchResults.map(result => `${result.snippet}`).join('\n');
-                const currentSnippetWithQuery = `\n\n[${query}]\n${currentSnippet}`;
-                snippets.push(currentSnippetWithQuery);
+            if (queries) {
+                for (let query of queries) {
+                    const searchUrl = `https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`;
+                    const searchResponse = await fetch(searchUrl);
+                    const searchResults = await searchResponse.json();
+                    const currentSnippet = searchResults.map(result => `${result.snippet}`).join('\n');
+                    const currentSnippetWithQuery = `\n\n[${query}]\n${currentSnippet}`;
+                    snippets.push(currentSnippetWithQuery);
+                }
             }
             const currentDate = new Date();
             const instructions =
