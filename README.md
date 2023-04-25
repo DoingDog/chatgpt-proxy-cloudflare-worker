@@ -1,7 +1,7 @@
 # chatgpt-proxy-cloudflare-worker
 <br>Cloudflare Worker 反向代理 ChatGPT API，支持流式输出，支持联网搜索功能，支持设置访问密码
 <br>
-<br>部署方式请自行搜索。部署时，修改代码最上面的 “openaikey” 内容为你自己的openai api key。以及修改 “apipassword”（访问密码）。
+<br>部署方式请自行搜索。部署时，修改代码最上面的 “myopenaikey” 内容为你自己的openai api key。以及修改 “myapipassword”（访问密码）。
 <br>
 <br>使用时，在客户端填写key的地方填写你的访问密码 填写域名改为你的域名。
 <br>
@@ -18,7 +18,7 @@
 <br>
 <br>Cloudflare Worker reverse proxy ChatGPT API, supports streaming output, supports network search function, supports setting access password
 <br>
-<br>Please search for deploying methods by yourself. Before deploy, modify the "openaikey" content at the top of the code to your own openai api key. Also, set the "apipassword" (access password).
+<br>Please search for deploying methods by yourself. Before deploy, modify the "myopenaikey" content at the top of the code to your own openai api key. Also, set the "myapipassword" (access password).
 <br>
 <br>When using, fill in your access password in the place where you fill in the api key in the ChatGPT client terminal, fill in the custom domain name with your worker domain name.
 <br>
