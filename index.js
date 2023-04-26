@@ -6,7 +6,7 @@ const myapipassword = 'Bearer 12345678';
 
 
 
-const myua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
+const myua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36';
 async function handleRequest(request) {
     const mbody = await request.clone().text();
     const url = new URL(request.url);
@@ -53,28 +53,38 @@ async function handleRequest(request) {
         redirect: 'follow'
     });
     modifiedRequest.headers.set('user-agent', myua);
+    modifiedRequest.headers.set('sec-ch-ua', '"Chromium";v="112", "Google Chrome";v="112", "Not:A-Brand";v="99"');
+    modifiedRequest.headers.set('sec-ch-ua-mobile', '?0');
+    modifiedRequest.headers.set('sec-ch-ua-platform', '"macOS"');
+    modifiedRequest.headers.set('sec-fetch-dest', 'empty');
+    modifiedRequest.headers.set('sec-fetch-mode', 'cors');
+    modifiedRequest.headers.set('sec-fetch-site', 'same-origin');
+    modifiedRequest.headers.set('Pragma', 'no-cache');
+    modifiedRequest.headers.set('Cache-Control', 'no-cache');
     if (rp === 'openai') {
         modifiedRequest.headers.set('authorization', openaikey);
         modifiedRequest.headers.set('content-type', 'application/json');
         modifiedRequest.headers.set('origin', 'https://bettergpt.chat');
         modifiedRequest.headers.set('referer', 'https://bettergpt.chat/');
+        modifiedRequest.headers.set('authority', 'api.openai.com');
     } else if (rp === 'churchless') {
         modifiedRequest.headers.set('authorization', 'Bearer sk-none');
         modifiedRequest.headers.set('content-type', 'application/json');
         modifiedRequest.headers.set('origin', 'https://acheong08.github.io');
         modifiedRequest.headers.set('referer', 'https://acheong08.github.io/');
+        modifiedRequest.headers.set('authority', 'free.churchless.tech');
     }
-    if (request.method === 'POST' && url.pathname.endsWith('/completions')) {
+    if (request.method === 'POST' && url.pathname.endsWith('/completions') && mbody) {
         const requestBody = await JSON.parse(mbody);
         const messages = requestBody.messages;
         const lastMessage = messages[messages.length - 1];
         const lastMessageContent = lastMessage.content;
-        if (lastMessageContent.includes("WS[")) {
-            const lastSecondUserMessage = messages[messages.length - 3];
-            let lastSecondUserMessageContent = '';
-            if (lastSecondUserMessage) {
-                lastSecondUserMessageContent = lastSecondUserMessage.content;
-            }
+        const lastSecondUserMessage = messages[messages.length - 3];
+        let lastSecondUserMessageContent = '';
+        if (lastSecondUserMessage) {
+            lastSecondUserMessageContent = lastSecondUserMessage.content;
+        }
+        if (lastMessageContent.includes("WS[") || lastSecondUserMessageContent.includes("WS[")) {
             let queries = [];
             let count = 0;
             const matches = lastMessageContent.match(/WS\[([^\]]+)\]/g);
