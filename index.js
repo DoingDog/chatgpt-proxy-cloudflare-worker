@@ -21,7 +21,7 @@ async function handleRequest(request) {
         (request.method === 'POST' || request.method === 'GET')) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader) {
-            return new Response('No Password. Enter password or use your own key.', {
+            return new Response(null, {
                 status: 401
             });
         } else if (authHeader !== myapipassword) {
@@ -110,17 +110,22 @@ async function handleRequest(request) {
                     }
                 }
             }
-            let limit = 2;
+            let limit = 5;
             let snippets = [];
             if (queries.length <= 2) {
-                limit = 4;
+                limit = 10;
             }
             if (queries) {
                 for (let query of queries) {
                     const searchUrl = `https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`;
                     const searchResponse = await fetch(searchUrl);
                     const searchResults = await searchResponse.json();
-                    const currentSnippet = searchResults.map(result => `${result.snippet}`).join('\n');
+                    if (!searchResults) {
+                        return new Response(null, {
+                            status: 429
+                        });
+                    }
+                    const currentSnippet = searchResults.map(result => `'${result.title}' : ${result.snippet} ; (${result.link})`).join('\n');
                     const currentSnippetWithQuery = `\n\n[${query}]\n${currentSnippet}`;
                     snippets.push(currentSnippetWithQuery);
                 }
