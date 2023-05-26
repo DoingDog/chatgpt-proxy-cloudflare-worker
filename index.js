@@ -1,7 +1,3 @@
-const myopenaikeys = ["Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
-  mykamiyatokens = ["not set"],
-  myapipasswords = ["Bearer 11111111"];
-
 addEventListener("fetch", (event) => {
   event.respondWith(
     handleRequest(event.request).catch(
@@ -162,22 +158,11 @@ async function handleRequest(request) {
     }
     if (lastMessageContent.includes("WS[") || lastSecondUserMessageContent.includes("WS[")) {
       let queries = [];
-      let count = 0;
-      const matches = lastMessageContent.match(/WS\[([^\]]+)\]/g);
-      if (matches) {
-        for (let match of matches) {
-          const query = match.slice(3, -1);
-          if (count < 2) {
-            queries.push(query);
-            count++;
-          }
-        }
-      }
-      count = 0;
-      if (lastSecondUserMessageContent) {
-        const matches2 = lastSecondUserMessageContent.match(/WS\[([^\]]+)\]/g);
-        if (matches2) {
-          for (let match of matches2) {
+      function matchContent(content, queries) {
+        let count = 0;
+        const matches = content.match(/WS\[[^\]]+\]/g);
+        if (matches) {
+          for (let match of matches) {
             const query = match.slice(3, -1);
             if (count < 2) {
               queries.push(query);
@@ -185,27 +170,27 @@ async function handleRequest(request) {
             }
           }
         }
+        return null;
+      }
+      matchContent(lastMessageContent, queries);
+      if (lastSecondUserMessageContent) {
+        matchContent(lastSecondUserMessageContent, queries);
       }
       if (queries.length >= 1) {
-        let limit = 5;
         let snippets = [];
-        if (queries.length <= 2) {
-          limit = 10;
-        }
+        const limit = queries.length <= 2 ? 10 : 5;
         for (let query of queries) {
           try {
             const searchResponse = await fetch(`https://api-ddg.iii.hair/search?q=${query}&max_results=${limit}`);
             const searchResults = await searchResponse.json();
             const currentSnippet = searchResults.map(({ title, body, href }) => `'${title}' : ${body} ; (${href})`).join("\n");
-            const currentSnippetWithQuery = `\n\n[${query}]\n${currentSnippet}`;
-            snippets.push(currentSnippetWithQuery);
+            snippets.push(`\n\n[${query}]\n${currentSnippet}`);
           } catch (err) {
             try {
               const searchResponse = await fetch(`https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`);
               const searchResults = await searchResponse.json();
               const currentSnippet = searchResults.map(({ title, snippet, link }) => `'${title}' : ${snippet} ; (${link})`).join("\n");
-              const currentSnippetWithQuery = `\n\n[${query}]\n${currentSnippet}`;
-              snippets.push(currentSnippetWithQuery);
+              snippets.push(`\n\n[${query}]\n${currentSnippet}`);
             } catch (err) {
               return httpErrorHandler(502);
             }
