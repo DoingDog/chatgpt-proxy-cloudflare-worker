@@ -24,6 +24,8 @@ function httpErrorHandler(httpCode) {
       return new Response("403 Forbidden", { headers: errHeaders, status: 403 });
     case 404:
       return new Response("404 Not Found", { headers: errHeaders, status: 404 });
+    case 405:
+      return new Response("405 Method Not Allowed", { headers: errHeaders, status: 405 });
     case 408:
       return new Response("408 Request Timeout", { headers: errHeaders, status: 408 });
     case 410:
@@ -43,13 +45,17 @@ function httpErrorHandler(httpCode) {
   }
 }
 async function handleRequest(request) {
+  if (request.method !== "POST" && request.method !== "GET" && request.method !== "OPTIONS") {
+    return httpErrorHandler(405);
+  }
   const url = new URL(request.url);
   const headers_Origin = request.headers.get("Access-Control-Allow-Origin") || "*";
   const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations"];
+  const unrestrictedPaths = ["usage", "login", "getDetails"];
   const mbody = await request.clone().text();
-  const urlPathname = url.pathname.split("/").pop();
-  let openaikey = "ini";
-  let kamiyatoken = "ini";
+  const urlPathname = url.pathname.split("?")[0].split("/").pop();
+  let openaikey = myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)];
+  let kamiyatoken = mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)];
   let endpoint = "ini",
     TELEGRAPH_URL = "ini";
   if (validPaths.includes(urlPathname) && (request.method === "POST" || request.method === "GET")) {
@@ -60,10 +66,9 @@ async function handleRequest(request) {
     if (!myapipasswords.includes(authHeader)) {
       openaikey = authHeader;
       kamiyatoken = authHeader;
-    } else {
-      openaikey = myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)];
-      kamiyatoken = mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)];
     }
+  } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
+    return httpErrorHandler(403);
   }
   switch (true) {
     case url.pathname.startsWith("/openai"):
@@ -181,12 +186,12 @@ async function handleRequest(request) {
           }
         }
       }
-      let limit = 5;
-      let snippets = [];
-      if (queries.length <= 2) {
-        limit = 10;
-      }
-      if (queries) {
+      if (queries.length >= 1) {
+        let limit = 5;
+        let snippets = [];
+        if (queries.length <= 2) {
+          limit = 10;
+        }
         for (let query of queries) {
           try {
             const searchResponse = await fetch(`https://api-ddg.iii.hair/search?q=${query}&max_results=${limit}`);
@@ -206,13 +211,13 @@ async function handleRequest(request) {
             }
           }
         }
+        const instructions = "Instructions: Answer me in the language used in my request or question above. Answer the questions or requests I made above in a comprehensive way. Below are some web search results. Use them if you need.";
+        lastMessage.content = `${lastMessageContent.replace(/WS\[[^\]]*\]/g, "")}\n\nCurrent date:${new Date().toLocaleString()} UTC\n\n${instructions}\n${snippets}`;
+        requestBody.messages[messages.length - 1] = lastMessage;
+        modifiedRequest = new Request(modifiedRequest, {
+          body: JSON.stringify(requestBody),
+        });
       }
-      const instructions = "Instructions: Answer me in the language used in my request or question above. Answer the questions or requests I made above in a comprehensive way. Below are some web search results. Use them if you need.";
-      lastMessage.content = `${lastMessageContent.replace(/WS\[[^\]]*\]/g, "")}\n\nCurrent date:${new Date().toLocaleString()} UTC\n\n${instructions}\n${snippets}`;
-      requestBody.messages[messages.length - 1] = lastMessage;
-      modifiedRequest = new Request(modifiedRequest, {
-        body: JSON.stringify(requestBody),
-      });
     }
   }
   try {
