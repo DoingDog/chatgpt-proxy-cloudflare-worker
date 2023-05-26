@@ -1,3 +1,7 @@
+const myopenaikeys = ["Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
+  mykamiyatokens = ["not set"],
+  myapipasswords = ["Bearer 11111111"];
+
 addEventListener("fetch", (event) => {
   event.respondWith(
     handleRequest(event.request).catch(
