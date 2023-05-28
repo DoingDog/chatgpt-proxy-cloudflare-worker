@@ -13,38 +13,52 @@ addEventListener("fetch", (event) => {
     )
   );
 });
-function httpErrorHandler(httpCode) {
-  const errHeaders = { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*" };
-  switch (httpCode) {
-    case 400:
-      return new Response("400 Bad Request", { headers: errHeaders, status: 400 });
-    case 401:
-      return new Response("401 Unauthorized", { headers: errHeaders, status: 401 });
-    case 403:
-      return new Response("403 Forbidden", { headers: errHeaders, status: 403 });
-    case 404:
-      return new Response("404 Not Found", { headers: errHeaders, status: 404 });
-    case 405:
-      return new Response("405 Method Not Allowed", { headers: errHeaders, status: 405 });
-    case 408:
-      return new Response("408 Request Timeout", { headers: errHeaders, status: 408 });
-    case 410:
-      return new Response("410 Gone", { headers: errHeaders, status: 410 });
-    case 413:
-      return new Response("413 Payload Too Large", { headers: errHeaders, status: 413 });
-    case 429:
-      return new Response("429 Too Many Requests", { headers: errHeaders, status: 429 });
-    case 500:
-      return new Response("500 Internal Server Error", { headers: errHeaders, status: 500 });
-    case 502:
-      return new Response("502 Bad Gateway", { headers: errHeaders, status: 502 });
-    case 503:
-      return new Response("503 Service Unavailable", { headers: errHeaders, status: 503 });
-    default:
-      return null;
-  }
-}
 async function handleRequest(request) {
+  if (request.url === `${new URL(request.url).origin}/`) {
+    const reqHeaders = {};
+    for (const [name, value] of request.headers.entries()) {
+      reqHeaders[name] = value;
+    }
+    const requestData = {
+      url: request.url,
+      method: request.method,
+      headers: reqHeaders,
+    };
+    return new Response(JSON.stringify(requestData, null, 2), {
+      headers: { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
+    });
+  }
+  function httpErrorHandler(httpCode) {
+    const errHeaders = { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
+    switch (httpCode) {
+      case 400:
+        return new Response("400 Bad Request", { headers: errHeaders, status: 400 });
+      case 401:
+        return new Response("401 Unauthorized", { headers: errHeaders, status: 401 });
+      case 403:
+        return new Response("403 Forbidden", { headers: errHeaders, status: 403 });
+      case 404:
+        return new Response("404 Not Found", { headers: errHeaders, status: 404 });
+      case 405:
+        return new Response("405 Method Not Allowed", { headers: errHeaders, status: 405 });
+      case 408:
+        return new Response("408 Request Timeout", { headers: errHeaders, status: 408 });
+      case 410:
+        return new Response("410 Gone", { headers: errHeaders, status: 410 });
+      case 413:
+        return new Response("413 Payload Too Large", { headers: errHeaders, status: 413 });
+      case 429:
+        return new Response("429 Too Many Requests", { headers: errHeaders, status: 429 });
+      case 500:
+        return new Response("500 Internal Server Error", { headers: errHeaders, status: 500 });
+      case 502:
+        return new Response("502 Bad Gateway", { headers: errHeaders, status: 502 });
+      case 503:
+        return new Response("503 Service Unavailable", { headers: errHeaders, status: 503 });
+      default:
+        return null;
+    }
+  }
   if (request.method !== "POST" && request.method !== "GET" && request.method !== "OPTIONS") {
     return httpErrorHandler(405);
   }
@@ -56,8 +70,6 @@ async function handleRequest(request) {
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   let openaikey = myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)];
   let kamiyatoken = mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)];
-  let endpoint = "ini",
-    TELEGRAPH_URL = "ini";
   if (validPaths.includes(urlPathname) && (request.method === "POST" || request.method === "GET")) {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) {
@@ -70,86 +82,80 @@ async function handleRequest(request) {
   } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
     return httpErrorHandler(403);
   }
+  const modifiedHeaders = Object.fromEntries(request.headers);
+  Object.assign(modifiedHeaders, {
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+    "sec-ch-ua": '"Chromium";v="116", "Google Chrome";v="116", "Not:A-Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    Pragma: "no-cache",
+    "Cache-Control": "no-cache",
+  });
   switch (true) {
     case url.pathname.startsWith("/openai"):
     case url.pathname.startsWith("/v1"):
-      TELEGRAPH_URL = "https://api.openai.com";
-      url.host = TELEGRAPH_URL.replace(/^https?:\/\//, "");
+      url.host = "api.openai.com";
       url.pathname = url.pathname.replace(/^\/openai\//, "/");
-      endpoint = "openai";
+      Object.assign(modifiedHeaders, {
+        authorization: openaikey,
+        "content-type": "application/json",
+        origin: "https://bettergpt.chat",
+        referer: "https://bettergpt.chat/",
+        authority: url.host,
+      });
       break;
     case url.pathname.startsWith("/churchless"):
-      TELEGRAPH_URL = "https://free.churchless.tech";
-      url.host = TELEGRAPH_URL.replace(/^https?:\/\//, "");
+      url.host = "free.churchless.tech";
       url.pathname = url.pathname.replace(/^\/churchless\//, "/");
-      endpoint = "churchless";
+      Object.assign(modifiedHeaders, {
+        authorization: "Bearer sk-none",
+        "content-type": "application/json",
+        origin: "https://acheong08.github.io",
+        referer: "https://acheong08.github.io/",
+        authority: url.host,
+      });
       break;
     case url.pathname.startsWith("/kamiya"):
-      TELEGRAPH_URL = "https://fastly-k1.kamiya.dev";
-      url.host = TELEGRAPH_URL.replace(/^https?:\/\//, "");
+      url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
-      endpoint = "kamiya";
+      Object.assign(modifiedHeaders, {
+        authorization: kamiyatoken,
+        "content-type": "application/json",
+        origin: "https://chat.kamiya.dev",
+        referer: "https://chat.kamiya.dev/",
+        authority: url.host,
+        path: "/api/openai/chat/completions",
+      });
       break;
     case url.pathname.startsWith("/kmyalogin"):
-      TELEGRAPH_URL = "https://fastly-k1.kamiya.dev";
-      url.host = TELEGRAPH_URL.replace(/^https?:\/\//, "");
+      url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kmyalogin\//, "/");
-      endpoint = "kmyalogin";
+      Object.assign(modifiedHeaders, {
+        authorization: kamiyatoken,
+        "content-type": "application/json",
+        origin: "https://www.kamiya.dev",
+        referer: "https://www.kamiya.dev/",
+        authority: url.host,
+      });
       break;
     default:
       return httpErrorHandler(404);
       break;
   }
+  const newHeaders = new Headers();
+  for (const [key, value] of Object.entries(modifiedHeaders)) {
+    newHeaders.append(key, value);
+  }
   let modifiedRequest = new Request(url.toString(), {
-    headers: request.headers,
+    headers: newHeaders,
     body: request.body,
     method: request.method,
     redirect: "follow",
   });
-  modifiedRequest.headers.set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36");
-  modifiedRequest.headers.set("sec-ch-ua", '"Chromium";v="116", "Google Chrome";v="116", "Not:A-Brand";v="99"');
-  modifiedRequest.headers.set("sec-ch-ua-mobile", "?0");
-  modifiedRequest.headers.set("sec-ch-ua-platform", '"macOS"');
-  modifiedRequest.headers.set("sec-fetch-dest", "empty");
-  modifiedRequest.headers.set("sec-fetch-mode", "cors");
-  modifiedRequest.headers.set("sec-fetch-site", "same-site");
-  modifiedRequest.headers.set("Pragma", "no-cache");
-  modifiedRequest.headers.set("Cache-Control", "no-cache");
-  switch (endpoint) {
-    case "openai":
-      modifiedRequest.headers.set("authorization", openaikey);
-      modifiedRequest.headers.set("content-type", "application/json");
-      modifiedRequest.headers.set("origin", "https://bettergpt.chat");
-      modifiedRequest.headers.set("referer", "https://bettergpt.chat/");
-      modifiedRequest.headers.set("authority", "api.openai.com");
-      break;
-    case "churchless":
-      modifiedRequest.headers.set("authorization", "Bearer sk-none");
-      modifiedRequest.headers.set("content-type", "application/json");
-      modifiedRequest.headers.set("origin", "https://acheong08.github.io");
-      modifiedRequest.headers.set("referer", "https://acheong08.github.io/");
-      modifiedRequest.headers.set("authority", "free.churchless.tech");
-      break;
-    case "kamiya":
-      modifiedRequest.headers.set("authorization", kamiyatoken);
-      modifiedRequest.headers.set("content-type", "application/json");
-      modifiedRequest.headers.set("origin", "https://chat.kamiya.dev");
-      modifiedRequest.headers.set("referer", "https://chat.kamiya.dev/");
-      modifiedRequest.headers.set("authority", "fastly-k1.kamiya.dev");
-      modifiedRequest.headers.set("path", "/api/openai/chat/completions");
-      break;
-    case "kmyalogin":
-      modifiedRequest.headers.set("authorization", kamiyatoken);
-      modifiedRequest.headers.set("content-type", "application/json");
-      modifiedRequest.headers.set("origin", "https://www.kamiya.dev");
-      modifiedRequest.headers.set("referer", "https://www.kamiya.dev/");
-      modifiedRequest.headers.set("authority", "fastly-k1.kamiya.dev");
-      break;
-    default:
-      return httpErrorHandler(404);
-      break;
-  }
   if (request.method === "POST" && url.pathname.endsWith("/completions") && mbody) {
     const requestBody = await JSON.parse(mbody);
     const messages = requestBody.messages;
