@@ -15,17 +15,9 @@ addEventListener("fetch", (event) => {
 });
 async function handleRequest(request) {
   if (request.url === `${new URL(request.url).origin}/`) {
-    const reqHeaders = {};
-    for (const [name, value] of request.headers.entries()) {
-      reqHeaders[name] = value;
-    }
-    const requestData = {
-      url: request.url,
-      method: request.method,
-      headers: reqHeaders,
-    };
+    const requestData = { url: request.url, method: request.method, headers: Object.fromEntries(request.headers), cf: Object.fromEntries(Object.entries(request.cf)) };
     return new Response(JSON.stringify(requestData, null, 2), {
-      headers: { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
     });
   }
   function httpErrorHandler(httpCode) {
