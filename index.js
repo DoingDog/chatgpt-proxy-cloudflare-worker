@@ -7,7 +7,7 @@ addEventListener("fetch", (event) => {
     handleRequest(event.request).catch(
       ({ stack }) =>
         new Response(stack, {
-          headers: { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*" },
+          headers: { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
           status: 500,
         })
     )
@@ -15,38 +15,39 @@ addEventListener("fetch", (event) => {
 });
 async function handleRequest(request) {
   if (request.url === `${new URL(request.url).origin}/`) {
-    const requestData = { url: request.url, method: request.method, headers: Object.fromEntries(request.headers), cf: Object.fromEntries(Object.entries(request.cf)) };
+    const reqBody = await request.clone().text();
+    const requestData = { url: request.url, method: request.method, data: reqBody, headers: Object.fromEntries(request.headers), cf: Object.fromEntries(Object.entries(request.cf)) };
     return new Response(JSON.stringify(requestData, null, 2), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
     });
   }
   function httpErrorHandler(httpCode) {
-    const errHeaders = { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
+    const errHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
     switch (httpCode) {
       case 400:
-        return new Response("400 Bad Request", { headers: errHeaders, status: 400 });
+        return new Response(JSON.stringify({ error: { message: "400 Bad Request", code: 400 } }, null, 2), { headers: errHeaders, status: 400 });
       case 401:
-        return new Response("401 Unauthorized", { headers: errHeaders, status: 401 });
+        return new Response(JSON.stringify({ error: { message: "401 Unauthorized", code: 401 } }, null, 2), { headers: errHeaders, status: 401 });
       case 403:
-        return new Response("403 Forbidden", { headers: errHeaders, status: 403 });
+        return new Response(JSON.stringify({ error: { message: "403 Forbidden", code: 403 } }, null, 2), { headers: errHeaders, status: 403 });
       case 404:
-        return new Response("404 Not Found", { headers: errHeaders, status: 404 });
+        return new Response(JSON.stringify({ error: { message: "404 Not Found", code: 404 } }, null, 2), { headers: errHeaders, status: 404 });
       case 405:
-        return new Response("405 Method Not Allowed", { headers: errHeaders, status: 405 });
+        return new Response(JSON.stringify({ error: { message: "405 Method Not Allowed", code: 405 } }, null, 2), { headers: errHeaders, status: 405 });
       case 408:
-        return new Response("408 Request Timeout", { headers: errHeaders, status: 408 });
+        return new Response(JSON.stringify({ error: { message: "408 Request Timeout", code: 408 } }, null, 2), { headers: errHeaders, status: 408 });
       case 410:
-        return new Response("410 Gone", { headers: errHeaders, status: 410 });
+        return new Response(JSON.stringify({ error: { message: "410 Gone", code: 410 } }, null, 2), { headers: errHeaders, status: 410 });
       case 413:
-        return new Response("413 Payload Too Large", { headers: errHeaders, status: 413 });
+        return new Response(JSON.stringify({ error: { message: "413 Payload Too Large", code: 413 } }, null, 2), { headers: errHeaders, status: 413 });
       case 429:
-        return new Response("429 Too Many Requests", { headers: errHeaders, status: 429 });
+        return new Response(JSON.stringify({ error: { message: "429 Too Many Requests", code: 429 } }, null, 2), { headers: errHeaders, status: 429 });
       case 500:
-        return new Response("500 Internal Server Error", { headers: errHeaders, status: 500 });
+        return new Response(JSON.stringify({ error: { message: "500 Internal Server Error", code: 500 } }, null, 2), { headers: errHeaders, status: 500 });
       case 502:
-        return new Response("502 Bad Gateway", { headers: errHeaders, status: 502 });
+        return new Response(JSON.stringify({ error: { message: "502 Bad Gateway", code: 502 } }, null, 2), { headers: errHeaders, status: 502 });
       case 503:
-        return new Response("503 Service Unavailable", { headers: errHeaders, status: 503 });
+        return new Response(JSON.stringify({ error: { message: "503 Service Unavailable", code: 503 } }, null, 2), { headers: errHeaders, status: 503 });
       default:
         return null;
     }
@@ -215,6 +216,7 @@ async function handleRequest(request) {
       return responseStatus;
     }
     modifiedResponse.headers.set("Access-Control-Allow-Origin", headers_Origin);
+    modifiedResponse.headers.set("Access-Control-Allow-Headers", "*");
     return modifiedResponse;
   } catch (err) {
     return httpErrorHandler(502);
