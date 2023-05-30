@@ -143,14 +143,24 @@ async function handleRequest(request) {
   for (const [key, value] of Object.entries(modifiedHeaders)) {
     newHeaders.append(key, value);
   }
-  let modifiedRequest = new Request(url.toString(), {
-    headers: newHeaders,
-    body: request.body,
-    method: request.method,
-    redirect: "follow",
-  });
+  let modifiedRequest;
+  try {
+    modifiedRequest = new Request(url.toString(), {
+      headers: newHeaders,
+      body: request.body,
+      method: request.method,
+      redirect: "follow",
+    });
+  } catch (error) {
+    return httpErrorHandler(400);
+  }
   if (request.method === "POST" && url.pathname.endsWith("/completions") && mbody) {
-    const requestBody = await JSON.parse(mbody);
+    let requestBody;
+    try {
+      requestBody = JSON.parse(mbody);
+    } catch (error) {
+      return httpErrorHandler(400);
+    }
     const messages = requestBody.messages;
     const lastMessage = messages[messages.length - 1];
     const lastMessageContent = lastMessage.content;
