@@ -56,10 +56,9 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const headers_Origin = request.headers.get("Access-Control-Allow-Origin") || "*";
   const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations"];
   const unrestrictedPaths = ["usage", "login", "getDetails"];
-  const mbody = await request.clone().text();
+  const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   let openaikey = myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)];
   let kamiyatoken = mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)];
@@ -140,9 +139,9 @@ async function handleRequest(request) {
       break;
   }
   const newHeaders = new Headers();
-  for (const [key, value] of Object.entries(modifiedHeaders)) {
+  Object.entries(modifiedHeaders).forEach(([key, value]) => {
     newHeaders.append(key, value);
-  }
+  });
   let modifiedRequest;
   try {
     modifiedRequest = new Request(url.toString(), {
@@ -154,68 +153,61 @@ async function handleRequest(request) {
   } catch (error) {
     return httpErrorHandler(400);
   }
-  if (request.method === "POST" && url.pathname.endsWith("/completions") && mbody) {
-    let requestBody;
+  if (request.method === "POST" && url.pathname.endsWith("/completions") && messageBody) {
     try {
-      requestBody = JSON.parse(mbody);
-    } catch (error) {
-      return httpErrorHandler(400);
-    }
-    const messages = requestBody.messages;
-    const lastMessage = messages[messages.length - 1];
-    const lastMessageContent = lastMessage.content;
-    const lastSecondUserMessage = messages[messages.length - 3];
-    let lastSecondUserMessageContent = "";
-    if (lastSecondUserMessage) {
-      lastSecondUserMessageContent = lastSecondUserMessage.content;
-    }
-    if (lastMessageContent.includes("WS[") || lastSecondUserMessageContent.includes("WS[")) {
-      let queries = [];
-      function matchContent(content, queries) {
-        let count = 0;
-        const matches = content.match(/WS\[[^\]]+\]/g);
-        if (matches) {
-          for (let match of matches) {
-            const query = match.slice(3, -1);
-            if (count < 2) {
-              queries.push(query);
-              count++;
-            }
+      const requestBody = JSON.parse(messageBody);
+      const messages = requestBody.messages;
+      const lastMessage = messages[messages.length - 1];
+      const lastMessageContent = lastMessage.content;
+      const lastSecondUserMessageContent = messages[messages.length - 3]?.content || "";
+      if (lastMessageContent.includes("WS[") || lastSecondUserMessageContent.includes("WS[")) {
+        const queries = [];
+        function matchContent(content, queries) {
+          let count = 0;
+          const matches = content.match(/WS\[[^\]]+\]/g);
+          if (matches) {
+            matches.forEach((match) => {
+              const query = match.slice(3, -1);
+              if (count < 2) {
+                queries.push(query);
+                count++;
+              }
+            });
           }
+          return null;
         }
-        return null;
-      }
-      matchContent(lastMessageContent, queries);
-      if (lastSecondUserMessageContent) {
-        matchContent(lastSecondUserMessageContent, queries);
-      }
-      if (queries.length >= 1) {
-        let snippets = [];
-        const limit = queries.length <= 2 ? 10 : 5;
-        for (let query of queries) {
-          try {
-            const searchResponse = await fetch(`https://api-ddg.iii.hair/search?q=${query}&max_results=${limit}`);
-            const searchResults = await searchResponse.json();
-            const currentSnippet = searchResults.map(({ title, body, href }) => `'${title}' : ${body} ; (${href})`).join("\n");
-            snippets.push(`\n\n[${query}]\n${currentSnippet}`);
-          } catch (err) {
+        matchContent(lastMessageContent, queries);
+        lastSecondUserMessageContent && matchContent(lastSecondUserMessageContent, queries);
+        if (queries.length >= 1) {
+          const snippets = [];
+          const limit = queries.length <= 2 ? 10 : 5;
+          for (const query of queries) {
             try {
-              const searchResponse = await fetch(`https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`);
+              const searchResponse = await fetch(`https://api-ddg.iii.hair/search?q=${query}&max_results=${limit}`);
               const searchResults = await searchResponse.json();
-              const currentSnippet = searchResults.map(({ title, snippet, link }) => `'${title}' : ${snippet} ; (${link})`).join("\n");
+              const currentSnippet = searchResults.map(({ title, body, href }) => `'${title}' : ${body} ; (${href})`).join("\n");
               snippets.push(`\n\n[${query}]\n${currentSnippet}`);
             } catch (err) {
-              return httpErrorHandler(502);
+              try {
+                const searchResponse = await fetch(`https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`);
+                const searchResults = await searchResponse.json();
+                const currentSnippet = searchResults.map(({ title, snippet, link }) => `'${title}' : ${snippet} ; (${link})`).join("\n");
+                snippets.push(`\n\n[${query}]\n${currentSnippet}`);
+              } catch (err) {
+                return httpErrorHandler(502);
+              }
             }
           }
+          const instructions = "Instructions: Answer me in the language used in my request or question above. Answer the questions or requests I made above in a comprehensive way. Below are some web search results. Use them if you need.";
+          lastMessage.content = `${lastMessageContent.replace(/WS\[[^\]]*\]/g, "")}\n\nCurrent date:${new Date().toLocaleString()} UTC\n\n${instructions}\n${snippets}`;
+          requestBody.messages[messages.length - 1] = lastMessage;
+          modifiedRequest = new Request(modifiedRequest, {
+            body: JSON.stringify(requestBody),
+          });
         }
-        const instructions = "Instructions: Answer me in the language used in my request or question above. Answer the questions or requests I made above in a comprehensive way. Below are some web search results. Use them if you need.";
-        lastMessage.content = `${lastMessageContent.replace(/WS\[[^\]]*\]/g, "")}\n\nCurrent date:${new Date().toLocaleString()} UTC\n\n${instructions}\n${snippets}`;
-        requestBody.messages[messages.length - 1] = lastMessage;
-        modifiedRequest = new Request(modifiedRequest, {
-          body: JSON.stringify(requestBody),
-        });
       }
+    } catch (error) {
+      return httpErrorHandler(400);
     }
   }
   try {
@@ -225,8 +217,8 @@ async function handleRequest(request) {
     if ((request.method === "POST" || request.method === "GET") && url.pathname.endsWith("/completions") && responseStatus) {
       return responseStatus;
     }
-    modifiedResponse.headers.set("Access-Control-Allow-Origin", headers_Origin);
-    modifiedResponse.headers.set("Access-Control-Allow-Headers", "*");
+    modifiedResponse.headers.set("Access-Control-Allow-Origin", request.headers.get("Access-Control-Allow-Origin") || "*");
+    modifiedResponse.headers.set("Access-Control-Allow-Headers", request.headers.get("Access-Control-Allow-Headers") || "*");
     return modifiedResponse;
   } catch (err) {
     return httpErrorHandler(502);
