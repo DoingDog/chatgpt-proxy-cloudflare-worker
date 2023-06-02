@@ -1,7 +1,3 @@
-const myopenaikeys = ["Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
-  mykamiyatokens = ["not set"],
-  myapipasswords = ["Bearer 11111111"];
-
 addEventListener("fetch", (event) => {
   event.respondWith(
     handleRequest(event.request).catch(
@@ -22,35 +18,24 @@ async function handleRequest(request) {
     });
   }
   function httpErrorHandler(httpCode) {
-    const errHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
-    switch (httpCode) {
-      case 400:
-        return new Response(JSON.stringify({ error: { message: "400 Bad Request", code: 400 } }, null, 2), { headers: errHeaders, status: 400 });
-      case 401:
-        return new Response(JSON.stringify({ error: { message: "401 Unauthorized", code: 401 } }, null, 2), { headers: errHeaders, status: 401 });
-      case 403:
-        return new Response(JSON.stringify({ error: { message: "403 Forbidden", code: 403 } }, null, 2), { headers: errHeaders, status: 403 });
-      case 404:
-        return new Response(JSON.stringify({ error: { message: "404 Not Found", code: 404 } }, null, 2), { headers: errHeaders, status: 404 });
-      case 405:
-        return new Response(JSON.stringify({ error: { message: "405 Method Not Allowed", code: 405 } }, null, 2), { headers: errHeaders, status: 405 });
-      case 408:
-        return new Response(JSON.stringify({ error: { message: "408 Request Timeout", code: 408 } }, null, 2), { headers: errHeaders, status: 408 });
-      case 410:
-        return new Response(JSON.stringify({ error: { message: "410 Gone", code: 410 } }, null, 2), { headers: errHeaders, status: 410 });
-      case 413:
-        return new Response(JSON.stringify({ error: { message: "413 Payload Too Large", code: 413 } }, null, 2), { headers: errHeaders, status: 413 });
-      case 429:
-        return new Response(JSON.stringify({ error: { message: "429 Too Many Requests", code: 429 } }, null, 2), { headers: errHeaders, status: 429 });
-      case 500:
-        return new Response(JSON.stringify({ error: { message: "500 Internal Server Error", code: 500 } }, null, 2), { headers: errHeaders, status: 500 });
-      case 502:
-        return new Response(JSON.stringify({ error: { message: "502 Bad Gateway", code: 502 } }, null, 2), { headers: errHeaders, status: 502 });
-      case 503:
-        return new Response(JSON.stringify({ error: { message: "503 Service Unavailable", code: 503 } }, null, 2), { headers: errHeaders, status: 503 });
-      default:
-        return null;
+    function returnCode(msg) {
+      return new Response(JSON.stringify({ error: { message: `${httpCode} ${msg}`, code: httpCode } }, null, 2), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" }, status: httpCode });
     }
+    const httpCodes = {
+      400: "Bad Request",
+      401: "Unauthorized",
+      403: "Forbidden",
+      404: "Not Found",
+      405: "Method Not Allowed",
+      408: "Request Timeout",
+      410: "Gone",
+      413: "Payload Too Large",
+      429: "Too Many Requests",
+      500: "Internal Server Error",
+      502: "Bad Gateway",
+      503: "Service Unavailable",
+    };
+    return httpCodes[httpCode] ? returnCode(httpCodes[httpCode]) : null;
   }
   if (request.method !== "POST" && request.method !== "GET" && request.method !== "OPTIONS") {
     return httpErrorHandler(405);
@@ -60,14 +45,18 @@ async function handleRequest(request) {
   const unrestrictedPaths = ["usage", "login", "getDetails"];
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
-  let openaikey = myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)];
-  let kamiyatoken = mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)];
+  const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
+  const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["eyxxxx.eyxxxx"];
+  const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
+  let openaikey = `Bearer ${myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)]}`;
+  let kamiyatoken = `Bearer ${mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)]}`;
   if (validPaths.includes(urlPathname) && (request.method === "POST" || request.method === "GET")) {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) {
       return httpErrorHandler(401);
     }
-    if (!myapipasswords.includes(authHeader)) {
+    const authHeaderValue = authHeader.substring("Bearer ".length);
+    if (!myapipasswords.includes(authHeaderValue)) {
       openaikey = authHeader;
       kamiyatoken = authHeader;
     }
@@ -85,6 +74,7 @@ async function handleRequest(request) {
     "sec-fetch-site": "same-site",
     Pragma: "no-cache",
     "Cache-Control": "no-cache",
+    "content-type": "application/json",
   });
   switch (true) {
     case url.pathname.startsWith("/openai"):
@@ -93,7 +83,6 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/openai\//, "/");
       Object.assign(modifiedHeaders, {
         authorization: openaikey,
-        "content-type": "application/json",
         origin: "https://bettergpt.chat",
         referer: "https://bettergpt.chat/",
         authority: url.host,
@@ -103,8 +92,6 @@ async function handleRequest(request) {
       url.host = "free.churchless.tech";
       url.pathname = url.pathname.replace(/^\/churchless\//, "/");
       Object.assign(modifiedHeaders, {
-        authorization: "Bearer sk-none",
-        "content-type": "application/json",
         origin: "https://acheong08.github.io",
         referer: "https://acheong08.github.io/",
         authority: url.host,
@@ -116,7 +103,6 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
       Object.assign(modifiedHeaders, {
         authorization: kamiyatoken,
-        "content-type": "application/json",
         origin: "https://chat.kamiya.dev",
         referer: "https://chat.kamiya.dev/",
         authority: url.host,
@@ -128,7 +114,6 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/kmyalogin\//, "/");
       Object.assign(modifiedHeaders, {
         authorization: kamiyatoken,
-        "content-type": "application/json",
         origin: "https://www.kamiya.dev",
         referer: "https://www.kamiya.dev/",
         authority: url.host,
@@ -198,7 +183,7 @@ async function handleRequest(request) {
               }
             }
           }
-          const instructions = "Instructions: Answer me in the language used in my request or question above. Answer the questions or requests I made above in a comprehensive way. Below are some web search results. Use them if you need.";
+          const instructions = "Instructions: Reply to me in the language of my request or question above. Give a comprehensive answer to the question or request I have made above. Below are some results from a web search. Use them if necessary.";
           lastMessage.content = `${lastMessageContent.replace(/WS\[[^\]]*\]/g, "")}\n\nCurrent date:${new Date().toLocaleString()} UTC\n\n${instructions}\n${snippets}`;
           requestBody.messages[messages.length - 1] = lastMessage;
           modifiedRequest = new Request(modifiedRequest, {
@@ -212,11 +197,11 @@ async function handleRequest(request) {
   }
   try {
     const response = await fetch(modifiedRequest);
-    const modifiedResponse = new Response(response.body, response);
-    const responseStatus = httpErrorHandler(modifiedResponse.status);
+    const responseStatus = httpErrorHandler(response.status);
     if ((request.method === "POST" || request.method === "GET") && url.pathname.endsWith("/completions") && responseStatus) {
       return responseStatus;
     }
+    const modifiedResponse = new Response(response.body, response);
     modifiedResponse.headers.set("Access-Control-Allow-Origin", request.headers.get("Access-Control-Allow-Origin") || "*");
     modifiedResponse.headers.set("Access-Control-Allow-Headers", request.headers.get("Access-Control-Allow-Headers") || "*");
     return modifiedResponse;
