@@ -75,10 +75,12 @@ async function handleRequest(request) {
     Pragma: "no-cache",
     "Cache-Control": "no-cache",
     "content-type": "application/json",
+    "X-Forwarded-For": "1.1.1.1",
+    "X-Real-IP": "1.1.1.1",
   });
   switch (true) {
-    case url.pathname.startsWith("/openai"):
-    case url.pathname.startsWith("/v1"):
+    case url.pathname.startsWith("/openai/"):
+    case url.pathname.startsWith("/v1/"):
       url.host = "api.openai.com";
       url.pathname = url.pathname.replace(/^\/openai\//, "/");
       Object.assign(modifiedHeaders, {
@@ -88,7 +90,7 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/churchless"):
+    case url.pathname.startsWith("/churchless/"):
       url.host = "free.churchless.tech";
       url.pathname = url.pathname.replace(/^\/churchless\//, "/");
       Object.assign(modifiedHeaders, {
@@ -97,7 +99,7 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/kamiya"):
+    case url.pathname.startsWith("/kamiya/"):
       url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
@@ -109,7 +111,7 @@ async function handleRequest(request) {
         path: "/api/openai/chat/completions",
       });
       break;
-    case url.pathname.startsWith("/kmyalogin"):
+    case url.pathname.startsWith("/kmyalogin/"):
       url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kmyalogin\//, "/");
       Object.assign(modifiedHeaders, {
