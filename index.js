@@ -10,16 +10,17 @@ addEventListener("fetch", (event) => {
   );
 });
 async function handleRequest(request) {
+  const cspHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
   if (request.url === `${new URL(request.url).origin}/`) {
     const reqBody = await request.clone().text();
     const requestData = { url: request.url, method: request.method, data: reqBody, headers: Object.fromEntries(request.headers), cf: Object.fromEntries(Object.entries(request.cf)) };
     return new Response(JSON.stringify(requestData, null, 2), {
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
+      headers: cspHeaders,
     });
   }
   function httpErrorHandler(httpCode) {
     function returnCode(msg) {
-      return new Response(JSON.stringify({ error: { message: `${httpCode} ${msg}`, code: httpCode } }, null, 2), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" }, status: httpCode });
+      return new Response(JSON.stringify({ error: { message: `${httpCode} ${msg}`, code: httpCode } }, null, 2), { headers: cspHeaders, status: httpCode });
     }
     const httpCodes = {
       400: "Bad Request",
@@ -41,8 +42,9 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models"];
   const unrestrictedPaths = ["usage", "login", "getDetails"];
+  const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
@@ -91,6 +93,12 @@ async function handleRequest(request) {
       });
       break;
     case url.pathname.startsWith("/churchless/"):
+      if (url.pathname.endsWith("/models")) {
+        const fakeResponse = await fetch(fakeModelsUrl);
+        return new Response(fakeResponse.body, {
+          headers: cspHeaders,
+        });
+      }
       url.host = "free.churchless.tech";
       url.pathname = url.pathname.replace(/^\/churchless\//, "/");
       Object.assign(modifiedHeaders, {
@@ -100,6 +108,12 @@ async function handleRequest(request) {
       });
       break;
     case url.pathname.startsWith("/kamiya/"):
+      if (url.pathname.endsWith("/models")) {
+        const fakeResponse = await fetch(fakeModelsUrl);
+        return new Response(fakeResponse.body, {
+          headers: cspHeaders,
+        });
+      }
       url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
