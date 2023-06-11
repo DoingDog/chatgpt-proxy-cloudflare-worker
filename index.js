@@ -42,7 +42,7 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "openai", "churchless", "kamiya"];
   const unrestrictedPaths = ["usage", "login", "getDetails"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
@@ -81,10 +81,11 @@ async function handleRequest(request) {
     "X-Real-IP": "1.1.1.1",
   });
   switch (true) {
-    case url.pathname.startsWith("/openai/"):
+    case url.pathname.startsWith("/openai"):
     case url.pathname.startsWith("/v1/"):
       url.host = "api.openai.com";
       url.pathname = url.pathname.replace(/^\/openai\//, "/");
+      url.pathname = url.pathname.replace(/^\/openai$/, "/v1/chat/completions");
       Object.assign(modifiedHeaders, {
         authorization: openaikey,
         origin: "https://bettergpt.chat",
@@ -92,7 +93,7 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/churchless/"):
+    case url.pathname.startsWith("/churchless"):
       if (url.pathname.endsWith("/models")) {
         const fakeResponse = await fetch(fakeModelsUrl);
         return new Response(fakeResponse.body, {
@@ -101,13 +102,14 @@ async function handleRequest(request) {
       }
       url.host = "free.churchless.tech";
       url.pathname = url.pathname.replace(/^\/churchless\//, "/");
+      url.pathname = url.pathname.replace(/^\/churchless$/, "/v1/chat/completions");
       Object.assign(modifiedHeaders, {
         origin: "https://acheong08.github.io",
         referer: "https://acheong08.github.io/",
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/kamiya/"):
+    case url.pathname.startsWith("/kamiya"):
       if (url.pathname.endsWith("/models")) {
         const fakeResponse = await fetch(fakeModelsUrl);
         return new Response(fakeResponse.body, {
@@ -116,6 +118,7 @@ async function handleRequest(request) {
       }
       url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
+      url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
       Object.assign(modifiedHeaders, {
         authorization: kamiyatoken,
@@ -125,7 +128,7 @@ async function handleRequest(request) {
         path: "/api/openai/chat/completions",
       });
       break;
-    case url.pathname.startsWith("/kmyalogin/"):
+    case url.pathname.startsWith("/kmyalogin"):
       url.host = "fastly-k1.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kmyalogin\//, "/");
       Object.assign(modifiedHeaders, {
