@@ -187,7 +187,7 @@ async function handleRequest(request) {
           const limit = queries.length <= 2 ? 10 : 5;
           for (const query of queries) {
             try {
-              const searchResponse = await fetch(`https://api-ddg.iii.hair/search?q=${query}&max_results=${limit}`);
+              const searchResponse = await fetch(`https://s0.awsl.app/search?q=${query}&max_results=${limit}`);
               const searchResults = await searchResponse.json();
               const currentSnippet = searchResults.map(({ title, body, href }) => `'${title}' : ${body} ; (${href})`).join("\n");
               snippets.push(`\n\n[${query}]\n${currentSnippet}`);
