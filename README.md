@@ -12,16 +12,14 @@
 - `PASSWORD`：反向代理 API 访问密码（*可选*，默认为 **cpcw**）
   - 示例：`password,football`
 - `API_KEY`：OpenAI Key，用于访问 GPT 端点（*可选*）
-  - 示例：`sk-sdh687ggiyvu6sdto2u4yvi7j,sk-2438r7gv7624r373v25fg75`
-- `KAMIYA_TOKEN`："kamiya.dev" 的 Access Token，用于访问 GPT 端点（*可选*）
-  - 示例：`eybv63756_crey3t.3ft2gt.eyb783642376egtf_WW`
+  - 示例：`sk-sdh687ggiyvu6sdto2u4yvi7j,sk-2438r7gv7624r373v25fg756v`
+- `KAMIYA_TOKEN`："kamiya.dev" 的 Key，用于访问 GPT 端点（*可选*）
+  - 示例：`sk-2438r7gv7624r373v25fg756v,sk-sdh687ggiyvu6sdto2u4yvi7j`
 
 使用 OpenAI API 时，在客户端 API key 输入处填写你的访问密码（或直接填写一个可用的 API KEY），将 API 地址改为 `https://workers_域名/v1/chat/completions`。
 
 除了 OpenAI API 你也可以用其他的 ChatGPT API
 
-- `https://workers_域名/churchless/v1/chat/completions` 
-  - 由 *acheong08* 提供的免费 API。
 - `https://workers_域名/kamiya/v1/chat/completions` 
   - 由 *kamiya.dev* 提供的 ChatGPT API。
 
@@ -47,16 +45,14 @@ Please search for the deployment method yourself. After deploying the code, add 
 - `PASSWORD`: reverse proxy API access password (*optional*, default is **cpcw**)
   - Example: `password,football`
 - `API_KEY`: OpenAI Key for accessing GPT endpoints (*optional*)
-  - Example: `sk-sdh687ggiyvu6sdto2u4yvi7j,sk-2438r7gv7624r373v25fg75`
-- `KAMIYA_TOKEN`: Access Token for "kamiya.dev" to access the GPT endpoint (*optional*)
-  - Example: `eybv63756_crey3t.3ft2gt.eyb783642376egtf_WW`
+  - Example: `sk-sdh687ggiyvu6sdto2u4yvi7j,sk-2438r7gv7624r373v25fg756v`
+- `KAMIYA_TOKEN`: Key for "kamiya.dev" to access the GPT endpoint (*optional*)
+  - Example: `sk-2438r7gv7624r373v25fg756v,sk-sdh687ggiyvu6sdto2u4yvi7j`
 
 When using the OpenAI API, fill in your access password in the client API key input (or just fill in an available API KEY) and change the API address to `https://workers_domain/v1/chat/completions`.
 
 You can also use other ChatGPT APIs besides the OpenAI API
 
-- `https://workers_domain/churchless/v1/chat/completions` 
-  - a free API provided by *acheong08*.
 - `https://workers_domain/kamiya/v1/chat/completions` 
   - ChatGPT API provided by *kamiya.dev*.
 

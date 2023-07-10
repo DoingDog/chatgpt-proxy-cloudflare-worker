@@ -5,8 +5,8 @@ addEventListener("fetch", (event) => {
         new Response(stack, {
           headers: { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
           status: 500,
-        })
-    )
+        }),
+    ),
   );
 });
 async function handleRequest(request) {
@@ -42,13 +42,13 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "openai", "churchless", "kamiya"];
-  const unrestrictedPaths = ["usage", "login", "getDetails"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation"];
+  const unrestrictedPaths = ["usage", "getDetails", "history"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
-  const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["eyxxxx.eyxxxx"];
+  const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
   let openaikey = `Bearer ${myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)]}`;
   let kamiyatoken = `Bearer ${mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)]}`;
@@ -93,22 +93,6 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/churchless"):
-      if (url.pathname.endsWith("/models")) {
-        const fakeResponse = await fetch(fakeModelsUrl);
-        return new Response(fakeResponse.body, {
-          headers: cspHeaders,
-        });
-      }
-      url.host = "free.churchless.tech";
-      url.pathname = url.pathname.replace(/^\/churchless\//, "/");
-      url.pathname = url.pathname.replace(/^\/churchless$/, "/v1/chat/completions");
-      Object.assign(modifiedHeaders, {
-        origin: "https://acheong08.github.io",
-        referer: "https://acheong08.github.io/",
-        authority: url.host,
-      });
-      break;
     case url.pathname.startsWith("/kamiya"):
       if (url.pathname.endsWith("/models")) {
         const fakeResponse = await fetch(fakeModelsUrl);
@@ -116,25 +100,15 @@ async function handleRequest(request) {
           headers: cspHeaders,
         });
       }
-      url.host = "fastly-k1.kamiya.dev";
+      url.host = "p0.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
+      url.pathname = url.pathname.replace(/^\/usage$/, "/api/session/getDetails");
       Object.assign(modifiedHeaders, {
         authorization: kamiyatoken,
         origin: "https://chat.kamiya.dev",
         referer: "https://chat.kamiya.dev/",
-        authority: url.host,
-        path: "/api/openai/chat/completions",
-      });
-      break;
-    case url.pathname.startsWith("/kmyalogin"):
-      url.host = "fastly-k1.kamiya.dev";
-      url.pathname = url.pathname.replace(/^\/kmyalogin\//, "/");
-      Object.assign(modifiedHeaders, {
-        authorization: kamiyatoken,
-        origin: "https://www.kamiya.dev",
-        referer: "https://www.kamiya.dev/",
         authority: url.host,
       });
       break;
