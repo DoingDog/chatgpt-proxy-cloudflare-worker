@@ -96,84 +96,133 @@ async function handleRequest(request) {
     case url.pathname.startsWith("/kamiya"):
       url.host = "p0.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
-      if (url.pathname.startsWith("/v1/dashboard/billing/usage")) {
-        return new Response(
-          JSON.stringify(
-            {
-              object: "list",
-              total_usage: 0.0,
-            },
-            null,
-            2,
-          ),
-          {
-            headers: cspHeaders,
-          },
-        );
-      }
-      if (url.pathname.endsWith("/models")) {
-        const fakeResponse = await fetch(fakeModelsUrl);
-        return new Response(fakeResponse.body, {
-          headers: cspHeaders,
-        });
-      }
-      if (url.pathname.endsWith("/info")) {
-        const infoResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
-          headers: {
-            Authorization: kamiyatoken,
-          },
-        });
-        return new Response(infoResponse.body, {
-          headers: cspHeaders,
-        });
-      }
-      if (url.pathname.endsWith("/subscription")) {
-        const billingResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
-          headers: {
-            Authorization: kamiyatoken,
-          },
-        });
-        const billingData = await billingResponse.json();
-        const totalAmount = billingData.data.credit * 0.002;
-        return new Response(
-          JSON.stringify(
-            {
-              object: "billing_subscription",
-              has_payment_method: false,
-              canceled: false,
-              canceled_at: null,
-              delinquent: null,
-              access_until: 3376656000,
-              hard_limit_usd: totalAmount,
-              system_hard_limit_usd: totalAmount,
-              plan: {
-                title: "Explore",
-                id: "free",
+      switch (true) {
+        case url.pathname.endsWith("/usage"):
+          return new Response(
+            JSON.stringify(
+              {
+                object: "list",
+                total_usage: 0.0,
               },
-              primary: true,
-              account_name: "Restful API Inc",
-              po_number: null,
-              billing_email: null,
-              tax_ids: null,
-              billing_address: null,
-              business_address: null,
+              null,
+              2,
+            ),
+            {
+              headers: cspHeaders,
             },
-            null,
-            2,
-          ),
-          {
+          );
+          break;
+        case url.pathname.endsWith("/models"):
+          const fakeResponse = await fetch(fakeModelsUrl);
+          return new Response(fakeResponse.body, {
             headers: cspHeaders,
-          },
-        );
+          });
+          break;
+        case url.pathname.endsWith("/info"):
+          const infoResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
+            headers: {
+              Authorization: kamiyatoken,
+            },
+          });
+          return new Response(infoResponse.body, {
+            headers: cspHeaders,
+          });
+          break;
+        case url.pathname.endsWith("/subscription"):
+          const billingResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
+            headers: {
+              Authorization: kamiyatoken,
+            },
+          });
+          const billingData = await billingResponse.json();
+          const totalAmount = billingData.data.credit * 0.002;
+          return new Response(
+            JSON.stringify(
+              {
+                object: "billing_subscription",
+                has_payment_method: false,
+                canceled: false,
+                canceled_at: null,
+                delinquent: null,
+                access_until: 3376656000,
+                hard_limit_usd: totalAmount,
+                system_hard_limit_usd: totalAmount,
+                plan: {
+                  title: "Explore",
+                  id: "free",
+                },
+                primary: true,
+                account_name: "Restful API Inc",
+                po_number: null,
+                billing_email: null,
+                tax_ids: null,
+                billing_address: null,
+                business_address: null,
+              },
+              null,
+              2,
+            ),
+            {
+              headers: cspHeaders,
+            },
+          );
+          break;
+        case url.pathname.endsWith("/generations"):
+          const imgRequestBody = JSON.parse(messageBody);
+          const sizeIndex = imgRequestBody.size.indexOf("x");
+          const realSize = parseInt(imgRequestBody.size.substring(0, sizeIndex));
+          const imageResponse = await fetch(`https://${url.host}/api/image/generate`, {
+            method: "POST",
+            headers: {
+              Authorization: kamiyatoken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+              {
+                prompt: imgRequestBody.prompt,
+                negativePrompt: "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry",
+                steps: 28,
+                scale: 12,
+                sampler: "DPM++ 2M Karras",
+                width: realSize,
+                height: realSize,
+                watermark: false,
+                model: "anything-v5-PrtRE",
+              },
+              null,
+              2,
+            ),
+          });
+          const imageData = await imageResponse.json();
+          return new Response(
+            JSON.stringify(
+              {
+                created: Date.now(),
+                data: [
+                  {
+                    url: imageData.image,
+                  },
+                ],
+              },
+              null,
+              2,
+            ),
+            {
+              headers: cspHeaders,
+            },
+          );
+          break;
+        default:
+          url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
+          url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
+          Object.assign(modifiedHeaders, {
+            authorization: kamiyatoken,
+            origin: "https://chat.kamiya.dev",
+            referer: "https://chat.kamiya.dev/",
+            authority: url.host,
+          });
+          break;
       }
-      url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
-      url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
-      Object.assign(modifiedHeaders, {
-        authorization: kamiyatoken,
-        origin: "https://chat.kamiya.dev",
-        referer: "https://chat.kamiya.dev/",
-        authority: url.host,
-      });
       break;
     default:
       return httpErrorHandler(404);
