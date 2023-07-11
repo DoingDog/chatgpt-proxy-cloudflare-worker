@@ -43,7 +43,7 @@ async function handleRequest(request) {
   }
   const url = new URL(request.url);
   const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation"];
-  const unrestrictedPaths = ["usage", "getDetails", "history", "subscription"];
+  const unrestrictedPaths = ["usage", "getDetails", "history", "subscription", "info"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
@@ -94,13 +94,39 @@ async function handleRequest(request) {
       });
       break;
     case url.pathname.startsWith("/kamiya"):
+      url.host = "p0.kamiya.dev";
+      url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
+      if (url.pathname.startsWith("/v1/dashboard/billing/usage")) {
+        return new Response(
+          JSON.stringify(
+            {
+              object: "list",
+              total_usage: 0.0,
+            },
+            null,
+            2,
+          ),
+          {
+            headers: cspHeaders,
+          },
+        );
+      }
       if (url.pathname.endsWith("/models")) {
         const fakeResponse = await fetch(fakeModelsUrl);
         return new Response(fakeResponse.body, {
           headers: cspHeaders,
         });
       }
-      url.host = "p0.kamiya.dev";
+      if (url.pathname.endsWith("/info")) {
+        const infoResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
+          headers: {
+            Authorization: kamiyatoken,
+          },
+        });
+        return new Response(infoResponse.body, {
+          headers: cspHeaders,
+        });
+      }
       if (url.pathname.endsWith("/subscription")) {
         const billingResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
           headers: {
@@ -108,7 +134,7 @@ async function handleRequest(request) {
           },
         });
         const billingData = await billingResponse.json();
-        const totalAmount = billingData.data.credit;
+        const totalAmount = billingData.data.credit * 0.002;
         return new Response(
           JSON.stringify(
             {
@@ -140,10 +166,8 @@ async function handleRequest(request) {
           },
         );
       }
-      url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
       url.pathname = url.pathname.replace(/^\/v1\//, "/api/openai/");
-      url.pathname = url.pathname.replace(/^\/usage$/, "/api/session/getDetails");
       Object.assign(modifiedHeaders, {
         authorization: kamiyatoken,
         origin: "https://chat.kamiya.dev",
