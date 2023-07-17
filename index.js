@@ -135,7 +135,7 @@ async function handleRequest(request) {
             },
           });
           const billingData = await billingResponse.json();
-          const totalAmount = billingData.data.credit * 0.002;
+          const totalAmount = billingData.data.credit * 0.0014;
           return new Response(
             JSON.stringify(
               {
