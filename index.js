@@ -42,12 +42,14 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p"];
   const unrestrictedPaths = ["usage", "getDetails", "history", "subscription", "info"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
+  const gptapikey = typeof GPTAPI_KEY !== "undefined" && GPTAPI_KEY !== "" ? GPTAPI_KEY : "sk-xxxxxxxxxx";
+  const gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
   const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
   let openaikey = `Bearer ${myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)]}`;
@@ -81,6 +83,29 @@ async function handleRequest(request) {
     "X-Real-IP": "1.1.1.1",
   });
   switch (true) {
+    case url.pathname.startsWith("/3p"):
+      url.host = "api.gptapi.us";
+      url.pathname = url.pathname.replace(/^\/3p\//, "/");
+      url.pathname = url.pathname.replace(/^\/3p$/, "/v1/chat/completions");
+      if (url.pathname.endsWith("/info")) {
+        const apiusbillingResponse = await fetch(`https://www.gptapi.us/api/user/self`, {
+          headers: {
+            Authorization: `Bearer ${gptapiaccesstoken}`,
+          },
+        });
+        const apiusbillingData = await apiusbillingResponse.json();
+        const apiusbilling = (apiusbillingData.data.quota - apiusbillingData.data.used_quota) / 500000;
+        return new Response(apiusbilling.toString(), {
+          headers: cspHeaders,
+        });
+      }
+      Object.assign(modifiedHeaders, {
+        authorization: gptapikey,
+        origin: "https://bettergpt.chat",
+        referer: "https://bettergpt.chat/",
+        authority: url.host,
+      });
+      break;
     case url.pathname.startsWith("/openai"):
     case url.pathname.startsWith("/v1/"):
       url.host = "api.openai.com";
@@ -278,14 +303,7 @@ async function handleRequest(request) {
               const currentSnippet = searchResults.map(({ title, body, href }) => `'${title}' : ${body} ; (${href})`).join("\n");
               snippets.push(`\n\n[${query}]\n${currentSnippet}`);
             } catch (err) {
-              try {
-                const searchResponse = await fetch(`https://ddg-api.herokuapp.com/search?query=${query}&limit=${limit}`);
-                const searchResults = await searchResponse.json();
-                const currentSnippet = searchResults.map(({ title, snippet, link }) => `'${title}' : ${snippet} ; (${link})`).join("\n");
-                snippets.push(`\n\n[${query}]\n${currentSnippet}`);
-              } catch (err) {
-                return httpErrorHandler(502);
-              }
+              return httpErrorHandler(502);
             }
           }
           const instructions = "Instructions: Reply to me in the language of my request or question above. Give a comprehensive answer to the question or request I have made above. Below are some results from a web search. Use them if necessary.";
