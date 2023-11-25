@@ -49,7 +49,7 @@ async function handleRequest(request) {
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
   const gptapikey = typeof GPTAPI_KEY !== "undefined" && GPTAPI_KEY !== "" ? GPTAPI_KEY : "sk-xxxxxxxxxx";
-  const gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
+  let gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
   const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
   let openaikey = `Bearer ${myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)]}`;
@@ -63,6 +63,7 @@ async function handleRequest(request) {
     if (!myapipasswords.includes(authHeaderValue)) {
       openaikey = authHeader;
       kamiyatoken = authHeader;
+      gptapiaccesstoken = authHeader;
     }
   } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
     return httpErrorHandler(403);
