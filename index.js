@@ -42,13 +42,14 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p", "bjq"];
   const unrestrictedPaths = ["usage", "getDetails", "history", "subscription", "info"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
   let gptapikey = typeof GPTAPI_KEY !== "undefined" && GPTAPI_KEY !== "" ? GPTAPI_KEY : "sk-xxxxxxxxxx";
+  let bjqkey = typeof BJQ_KEY !== "undefined" && BJQ_KEY !== "" ? BJQ_KEY : "sk-xxxxxxxxxx";
   const gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
   const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
@@ -64,6 +65,7 @@ async function handleRequest(request) {
       openaikey = authHeader;
       kamiyatoken = authHeader;
       gptapikey = authHeader;
+      bjqkey = authHeader;
     }
   } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
     return httpErrorHandler(403);
@@ -102,6 +104,24 @@ async function handleRequest(request) {
       }
       Object.assign(modifiedHeaders, {
         authorization: gptapikey,
+        origin: "https://bettergpt.chat",
+        referer: "https://bettergpt.chat/",
+        authority: url.host,
+      });
+      break;
+    case url.pathname.startsWith("/bjq"):
+      url.host = "api.openai.one";
+      url.pathname = url.pathname.replace(/^\/bjq\//, "/");
+      url.pathname = url.pathname.replace(/^\/bjq$/, "/v1/chat/completions");
+      if (url.pathname.endsWith("/info")) {
+        const bjqbillingResponse = await fetch(`https://price.openai.one/api.php?GetData&Getkeyinfo&key=${bjqkey}`);
+        const bjqbillingData = await bjqbillingResponse.json();
+        return new Response(bjqbillingData.remain_quota.toString(), {
+          headers: cspHeaders,
+        });
+      }
+      Object.assign(modifiedHeaders, {
+        authorization: bjqkey,
         origin: "https://bettergpt.chat",
         referer: "https://bettergpt.chat/",
         authority: url.host,
