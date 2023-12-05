@@ -97,8 +97,8 @@ async function handleRequest(request) {
           },
         });
         const apiusbillingData = await apiusbillingResponse.json();
-        const apiusbilling = (apiusbillingData.data.quota - apiusbillingData.data.used_quota) / 500000;
-        return new Response(apiusbilling.toString(), {
+        const apiusbilling = (apiusbillingData.data.quota - apiusbillingData.data.used_quota) / 2000000;
+        return new Response(apiusbilling.toFixed(4), {
           headers: cspHeaders,
         });
       }
@@ -116,7 +116,7 @@ async function handleRequest(request) {
       if (url.pathname.endsWith("/info")) {
         const bjqbillingResponse = await fetch(`https://price.openai.one/api.php?GetData&Getkeyinfo&key=${bjqkey}`);
         const bjqbillingData = await bjqbillingResponse.json();
-        return new Response(bjqbillingData.remain_quota.toString(), {
+        return new Response(Number(bjqbillingData.remain_quota).toFixed(4), {
           headers: cspHeaders,
         });
       }
@@ -170,7 +170,8 @@ async function handleRequest(request) {
               Authorization: kamiyatoken,
             },
           });
-          return new Response(infoResponse.body, {
+          const kmybillingData = await infoResponse.json();
+          return new Response(kmybillingData.data.credit.toString(), {
             headers: cspHeaders,
           });
           break;
