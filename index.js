@@ -97,7 +97,7 @@ async function handleRequest(request) {
           },
         });
         const apiusbillingData = await apiusbillingResponse.json();
-        const apiusbilling = (apiusbillingData.data.quota - apiusbillingData.data.used_quota) / 2000000;
+        const apiusbilling = apiusbillingData.data.quota / 500000;
         return new Response(apiusbilling.toFixed(4), {
           headers: cspHeaders,
         });
