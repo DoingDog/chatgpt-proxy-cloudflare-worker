@@ -48,7 +48,7 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p", "bjq"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p", "bjq", "ato"];
   const unrestrictedPaths = ["usage", "getDetails", "history", "subscription", "info"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
@@ -92,6 +92,44 @@ async function handleRequest(request) {
     "X-Real-IP": "1.1.1.1",
   });
   switch (true) {
+    case url.pathname.startsWith("/ato"):
+    case url.pathname.startsWith("/v1/"):
+      if (!url.pathname.endsWith("/ato") && !url.pathname.endsWith("/completions") && !url.pathname.endsWith("/models")) {
+        return httpErrorHandler(404);
+      }
+      url.pathname = url.pathname.replace(/^\/ato\//, "/");
+      url.pathname = url.pathname.replace(/^\/ato$/, "/v1/chat/completions");
+      if (request.method === "POST" && url.pathname.endsWith("/completions")) {
+        const models3p = ["gpt-3.5-turbo-16k", "gpt-3.5-turbo", "gpt-4", "gpt-4-32k"];
+        const atoRequestBody = await request.clone().json();
+        const model = atoRequestBody.model;
+        if (models3p.includes(model)) {
+          url.host = "api.gptapi.us";
+          Object.assign(modifiedHeaders, {
+            authorization: gptapikey,
+            origin: "https://bettergpt.chat",
+            referer: "https://bettergpt.chat/",
+            authority: url.host,
+          });
+        } else {
+          url.host = "api.openai.one";
+          Object.assign(modifiedHeaders, {
+            authorization: bjqkey,
+            origin: "https://bettergpt.chat",
+            referer: "https://bettergpt.chat/",
+            authority: url.host,
+          });
+        }
+      } else {
+        url.host = "api.gptapi.us";
+        Object.assign(modifiedHeaders, {
+          authorization: gptapikey,
+          origin: "https://bettergpt.chat",
+          referer: "https://bettergpt.chat/",
+          authority: url.host,
+        });
+      }
+      break;
     case url.pathname.startsWith("/3p"):
       url.host = "api.gptapi.us";
       url.pathname = url.pathname.replace(/^\/3p\//, "/");
@@ -134,7 +172,6 @@ async function handleRequest(request) {
       });
       break;
     case url.pathname.startsWith("/openai"):
-    case url.pathname.startsWith("/v1/"):
       url.host = "api.openai.com";
       url.pathname = url.pathname.replace(/^\/openai\//, "/");
       url.pathname = url.pathname.replace(/^\/openai$/, "/v1/chat/completions");
@@ -149,21 +186,6 @@ async function handleRequest(request) {
       url.host = "p0.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       switch (true) {
-        case url.pathname.endsWith("/usage"):
-          return new Response(
-            JSON.stringify(
-              {
-                object: "list",
-                total_usage: 0.0,
-              },
-              null,
-              2,
-            ),
-            {
-              headers: cspHeaders,
-            },
-          );
-          break;
         case url.pathname.endsWith("/models"):
           const fakeResponse = await fetch(fakeModelsUrl);
           return new Response(fakeResponse.body, {
@@ -180,90 +202,6 @@ async function handleRequest(request) {
           return new Response(kmybillingData.data.credit.toString(), {
             headers: cspHeaders,
           });
-          break;
-        case url.pathname.endsWith("/subscription"):
-          const billingResponse = await fetch(`https://${url.host}/api/session/getDetails`, {
-            headers: {
-              Authorization: kamiyatoken,
-            },
-          });
-          const billingData = await billingResponse.json();
-          const totalAmount = billingData.data.credit * 0.0014;
-          return new Response(
-            JSON.stringify(
-              {
-                object: "billing_subscription",
-                has_payment_method: false,
-                canceled: false,
-                canceled_at: null,
-                delinquent: null,
-                access_until: 3376656000,
-                hard_limit_usd: totalAmount,
-                system_hard_limit_usd: totalAmount,
-                plan: {
-                  title: "Explore",
-                  id: "free",
-                },
-                primary: true,
-                account_name: "Restful API Inc",
-                po_number: null,
-                billing_email: null,
-                tax_ids: null,
-                billing_address: null,
-                business_address: null,
-              },
-              null,
-              2,
-            ),
-            {
-              headers: cspHeaders,
-            },
-          );
-          break;
-        case url.pathname.endsWith("/generations"):
-          const imgRequestBody = JSON.parse(messageBody);
-          const sizeIndex = imgRequestBody.size.indexOf("x");
-          const realSize = parseInt(imgRequestBody.size.substring(0, sizeIndex));
-          const imageResponse = await fetch(`https://${url.host}/api/image/generate`, {
-            method: "POST",
-            headers: {
-              Authorization: kamiyatoken,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(
-              {
-                prompt: imgRequestBody.prompt,
-                negativePrompt: "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry",
-                steps: 28,
-                scale: 12,
-                sampler: "DPM++ 2M Karras",
-                width: realSize,
-                height: realSize,
-                watermark: false,
-                model: "anything-v5-PrtRE",
-              },
-              null,
-              2,
-            ),
-          });
-          const imageData = await imageResponse.json();
-          return new Response(
-            JSON.stringify(
-              {
-                created: Date.now(),
-                data: [
-                  {
-                    url: imageData.image,
-                  },
-                ],
-              },
-              null,
-              2,
-            ),
-            {
-              headers: cspHeaders,
-            },
-          );
           break;
         default:
           url.pathname = url.pathname.replace(/^\/kamiya$/, "/v1/chat/completions");
