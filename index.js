@@ -38,7 +38,13 @@ async function handleRequest(request) {
     };
     return httpCodes[httpCode] ? returnCode(httpCodes[httpCode]) : null;
   }
-  if (request.method !== "POST" && request.method !== "GET" && request.method !== "OPTIONS") {
+  if (request.method == "OPTIONS") {
+    return new Response(null, {
+      headers: { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS" },
+      status: 204,
+    });
+  }
+  if (request.method !== "POST" && request.method !== "GET") {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
