@@ -56,6 +56,7 @@ async function handleRequest(request) {
   const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
   let gptapikey = typeof GPTAPI_KEY !== "undefined" && GPTAPI_KEY !== "" ? GPTAPI_KEY : "sk-xxxxxxxxxx";
   let bjqkey = typeof BJQ_KEY !== "undefined" && BJQ_KEY !== "" ? BJQ_KEY : "sk-xxxxxxxxxx";
+  let omgapikey = typeof OMG_KEY !== "undefined" && OMG_KEY !== "" ? OMG_KEY : "sk-xxxxxxxxxx";
   const gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
   const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
@@ -72,6 +73,7 @@ async function handleRequest(request) {
       kamiyatoken = authHeader;
       gptapikey = authHeader;
       bjqkey = authHeader;
+      omgapikey = authHeader;
     }
   } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
     return httpErrorHandler(403);
@@ -112,18 +114,18 @@ async function handleRequest(request) {
             authority: url.host,
           });
         } else {
-          url.host = "api.openai.one";
+          url.host = "api.ohmygpt.com";
           Object.assign(modifiedHeaders, {
-            authorization: bjqkey,
+            authorization: omgapikey,
             origin: "https://bettergpt.chat",
             referer: "https://bettergpt.chat/",
             authority: url.host,
           });
         }
       } else {
-        url.host = "api.gptapi.us";
+        url.host = "api.ohmygpt.com";
         Object.assign(modifiedHeaders, {
-          authorization: gptapikey,
+          authorization: omgapikey,
           origin: "https://bettergpt.chat",
           referer: "https://bettergpt.chat/",
           authority: url.host,
@@ -148,6 +150,31 @@ async function handleRequest(request) {
       }
       Object.assign(modifiedHeaders, {
         authorization: gptapikey,
+        origin: "https://bettergpt.chat",
+        referer: "https://bettergpt.chat/",
+        authority: url.host,
+      });
+      break;
+    case url.pathname.startsWith("/omg"):
+      url.host = "api.ohmygpt.com";
+      url.pathname = url.pathname.replace(/^\/omg\//, "/");
+      url.pathname = url.pathname.replace(/^\/omg$/, "/v1/chat/completions");
+      if (url.pathname.endsWith("/info")) {
+        const omgbillingResponse = await fetch(`https://api.ohmygpt.com/api/v1/user/admin/balance`, {
+          headers: {
+            Authorization: `Bearer ${omgapikey}`,
+          },
+          method: "POST",
+          body: null,
+        });
+        const omgbillingData = await omgbillingResponse.json();
+        const omgbilling = parseFloat(omgbillingData.data.balance) / 250000;
+        return new Response(omgbilling.toFixed(4), {
+          headers: cspHeaders,
+        });
+      }
+      Object.assign(modifiedHeaders, {
+        authorization: omgapikey,
         origin: "https://bettergpt.chat",
         referer: "https://bettergpt.chat/",
         authority: url.host,
