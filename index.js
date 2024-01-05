@@ -103,12 +103,21 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/ato$/, "/v1/chat/completions");
       if (request.method === "POST" && url.pathname.endsWith("/completions")) {
         const models3p = ["gpt-3.5-turbo-16k", "gpt-3.5-turbo", "gpt-4", "gpt-4-32k"];
+        const modelsbjq = ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"];
         const atoRequestBody = await request.clone().json();
         const model = atoRequestBody.model;
         if (models3p.includes(model)) {
           url.host = "api.gptapi.us";
           Object.assign(modifiedHeaders, {
             authorization: gptapikey,
+            origin: "https://bettergpt.chat",
+            referer: "https://bettergpt.chat/",
+            authority: url.host,
+          });
+        } else if (modelsbjq.includes(model)) {
+          url.host = "api.openai.one";
+          Object.assign(modifiedHeaders, {
+            authorization: bjqkey,
             origin: "https://bettergpt.chat",
             referer: "https://bettergpt.chat/",
             authority: url.host,
@@ -168,7 +177,7 @@ async function handleRequest(request) {
           body: null,
         });
         const omgbillingData = await omgbillingResponse.json();
-        const omgbilling = parseFloat(omgbillingData.data.balance) / 250000;
+        const omgbilling = parseFloat(omgbillingData.data.balance) / 34000;
         return new Response(omgbilling.toFixed(4), {
           headers: cspHeaders,
         });
@@ -187,7 +196,7 @@ async function handleRequest(request) {
       if (url.pathname.endsWith("/info")) {
         const bjqbillingResponse = await fetch(`https://price.openai.one/api.php?GetData&Getkeyinfo&key=${bjqkey}`);
         const bjqbillingData = await bjqbillingResponse.json();
-        return new Response(Number(bjqbillingData.remain_quota).toFixed(4), {
+        return new Response((Number(bjqbillingData.remain_quota) * 2).toFixed(4), {
           headers: cspHeaders,
         });
       }
@@ -226,7 +235,7 @@ async function handleRequest(request) {
             },
           });
           const kmybillingData = await infoResponse.json();
-          return new Response(kmybillingData.data.credit.toString(), {
+          return new Response((kmybillingData.data.credit / 100).toFixed(4), {
             headers: cspHeaders,
           });
           break;
