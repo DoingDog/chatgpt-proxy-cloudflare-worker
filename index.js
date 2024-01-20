@@ -48,7 +48,7 @@ async function handleRequest(request) {
     return httpErrorHandler(405);
   }
   const url = new URL(request.url);
-  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p", "bjq", "ato"];
+  const validPaths = ["completions", "generations", "transcriptions", "edits", "embeddings", "translations", "variations", "files", "fine-tunes", "moderations", "models", "listBaseModel", "openai", "kamiya", "generate", "conversation", "3p", "bjq", "ato", "speech"];
   const unrestrictedPaths = ["usage", "getDetails", "history", "subscription", "info"];
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
@@ -96,28 +96,17 @@ async function handleRequest(request) {
   switch (true) {
     case url.pathname.startsWith("/ato"):
     case url.pathname.startsWith("/v1/"):
-      if (!url.pathname.endsWith("/ato") && !url.pathname.endsWith("/completions") && !url.pathname.endsWith("/models")) {
-        return httpErrorHandler(404);
-      }
       url.pathname = url.pathname.replace(/^\/ato\//, "/");
       url.pathname = url.pathname.replace(/^\/ato$/, "/v1/chat/completions");
+      const validapi = ["models", "generations", "completions", "speech"];
       if (request.method === "POST" && url.pathname.endsWith("/completions")) {
         const models3p = ["gpt-3.5-turbo-16k", "gpt-3.5-turbo", "gpt-4", "gpt-4-32k"];
-        const modelsbjq = ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"];
         const atoRequestBody = await request.clone().json();
         const model = atoRequestBody.model;
         if (models3p.includes(model)) {
           url.host = "api.gptapi.us";
           Object.assign(modifiedHeaders, {
             authorization: gptapikey,
-            origin: "https://bettergpt.chat",
-            referer: "https://bettergpt.chat/",
-            authority: url.host,
-          });
-        } else if (modelsbjq.includes(model)) {
-          url.host = "api.openai.one";
-          Object.assign(modifiedHeaders, {
-            authorization: bjqkey,
             origin: "https://bettergpt.chat",
             referer: "https://bettergpt.chat/",
             authority: url.host,
@@ -131,7 +120,7 @@ async function handleRequest(request) {
             authority: url.host,
           });
         }
-      } else {
+      } else if (validapi.includes(url.pathname.split("/").pop())) {
         url.host = "api.ohmygpt.com";
         Object.assign(modifiedHeaders, {
           authorization: omgapikey,
@@ -139,6 +128,8 @@ async function handleRequest(request) {
           referer: "https://bettergpt.chat/",
           authority: url.host,
         });
+      } else {
+        return httpErrorHandler(404);
       }
       break;
     case url.pathname.startsWith("/3p"):
