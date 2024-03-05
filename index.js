@@ -100,7 +100,7 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/ato$/, "/v1/chat/completions");
       const validapi = ["models", "generations", "completions", "speech"];
       if (request.method === "POST" && url.pathname.endsWith("/completions")) {
-        const models3p = ["gpt-3.5-turbo-16k", "gpt-3.5-turbo", "gpt-4", "gpt-4-32k"];
+        const models3p = ["gpt-4-0125-preview", "gpt-4", "gpt-4-32k"];
         const atoRequestBody = await request.clone().json();
         const model = atoRequestBody.model;
         if (models3p.includes(model)) {
