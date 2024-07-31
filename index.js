@@ -5,8 +5,8 @@ addEventListener("fetch", (event) => {
         new Response(stack, {
           headers: { "Content-Type": "text/plain;charset=utf8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" },
           status: 500,
-        }),
-    ),
+        })
+    )
   );
 });
 async function handleRequest(request) {
@@ -53,15 +53,30 @@ async function handleRequest(request) {
   const fakeModelsUrl = "https://gist.githubusercontent.com/DoingDog/5d9f8228d02645bb2ace999de796e5b9/raw/fakeModels.json";
   const messageBody = await request.clone().text();
   const urlPathname = url.pathname.split("?")[0].split("/").pop();
-  const myopenaikeys = typeof API_KEY !== "undefined" && API_KEY !== "" ? API_KEY.split(",") : ["sk-xxxxxxxxxx"];
-  let gptapikey = typeof GPTAPI_KEY !== "undefined" && GPTAPI_KEY !== "" ? GPTAPI_KEY : "sk-xxxxxxxxxx";
-  let bjqkey = typeof BJQ_KEY !== "undefined" && BJQ_KEY !== "" ? BJQ_KEY : "sk-xxxxxxxxxx";
-  let omgapikey = typeof OMG_KEY !== "undefined" && OMG_KEY !== "" ? OMG_KEY : "sk-xxxxxxxxxx";
-  const gptapiaccesstoken = typeof GPTAPI_TOKEN !== "undefined" && GPTAPI_TOKEN !== "" ? GPTAPI_TOKEN : "abcdefg";
-  const mykamiyatokens = typeof KAMIYA_TOKEN !== "undefined" && KAMIYA_TOKEN !== "" ? KAMIYA_TOKEN.split(",") : ["sk-xxxxxxxxxx"];
+  // Helper function to handle key/token initialization and return random element if array
+  function initializeAndGetRandomKey(variable, defaultValue, shouldBeArray = false) {
+    const finalValue = typeof variable !== "undefined" && variable !== "" ? variable : defaultValue;
+
+    if (shouldBeArray) {
+      const arrayValue = finalValue.split(",");
+      // Return a random element from the array
+      return arrayValue[Math.floor(Math.random() * arrayValue.length)];
+    }
+
+    return finalValue;
+  }
+
+  // Constants and variables initialization
+  const openaikey = `Bearer ${initializeAndGetRandomKey(API_KEY, "sk-xxxxxxxxxx", true)}`;
+  let gptapikey = initializeAndGetRandomKey(GPTAPI_KEY, "sk-xxxxxxxxxx");
+  let bjqkey = initializeAndGetRandomKey(BJQ_KEY, "sk-xxxxxxxxxx");
+  let omgapikey = initializeAndGetRandomKey(OMG_KEY, "sk-xxxxxxxxxx");
+  let omgxapikey = initializeAndGetRandomKey(OMGX_KEY, "sk-xxxxxxxxxx");
+  const gptapiaccesstoken = initializeAndGetRandomKey(GPTAPI_TOKEN, "abcdefg");
+  const kamiyatoken = `Bearer ${initializeAndGetRandomKey(KAMIYA_TOKEN, "sk-xxxxxxxxxx", true)}`;
+
   const myapipasswords = typeof PASSWORD !== "undefined" && PASSWORD !== "" ? PASSWORD.split(",") : ["cpcw"];
-  let openaikey = `Bearer ${myopenaikeys[Math.floor(Math.random() * myopenaikeys.length)]}`;
-  let kamiyatoken = `Bearer ${mykamiyatokens[Math.floor(Math.random() * mykamiyatokens.length)]}`;
+
   if (validPaths.includes(urlPathname) && (request.method === "POST" || request.method === "GET")) {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) {
@@ -74,6 +89,7 @@ async function handleRequest(request) {
       gptapikey = authHeader;
       bjqkey = authHeader;
       omgapikey = authHeader;
+      omgxapikey = authHeader;
     }
   } else if (!validPaths.includes(urlPathname) && !unrestrictedPaths.includes(urlPathname)) {
     return httpErrorHandler(403);
@@ -100,7 +116,10 @@ async function handleRequest(request) {
       url.pathname = url.pathname.replace(/^\/ato$/, "/v1/chat/completions");
       const validapi = ["models", "generations", "completions", "speech"];
       if (request.method === "POST" && url.pathname.endsWith("/completions")) {
-        const models3p = ["gpt-4-0125-preview", "gpt-4", "gpt-4-32k"];
+        // 从环境变量中读取模型列表，以逗号分隔
+        const models3pString = CHEAP_MODELS || "gemini-1.5-pro,command-r-plus";
+
+        const models3p = models3pString.split(",").map((model) => model.trim());
         const atoRequestBody = await request.clone().json();
         const model = atoRequestBody.model;
         if (models3p.includes(model)) {
@@ -155,6 +174,31 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
+    /*case url.pathname.startsWith("/oma"):
+      url.host = "api.ohmygpt.com";
+      url.pathname = url.pathname.replace(/^\/oma\//, "/");
+      url.pathname = url.pathname.replace(/^\/oma$/, "/v1/chat/completions");
+      if (url.pathname.endsWith("/info")) {
+        const omgbillingResponse = await fetch(`https://api.ohmygpt.com/api/v1/user/admin/balance`, {
+          headers: {
+            Authorization: `Bearer ${omgxapikey}`,
+          },
+          method: "POST",
+          body: null,
+        });
+        const omgbillingData = await omgbillingResponse.json();
+        const omgbilling = parseFloat(omgbillingData.data.balance) / 34000;
+        return new Response(omgbilling.toFixed(4), {
+          headers: cspHeaders,
+        });
+      }
+      Object.assign(modifiedHeaders, {
+        authorization: omgxapikey,
+        origin: "https://bettergpt.chat",
+        referer: "https://bettergpt.chat/",
+        authority: url.host,
+      });
+      break;
     case url.pathname.startsWith("/omg"):
       url.host = "api.ohmygpt.com";
       url.pathname = url.pathname.replace(/^\/omg\//, "/");
@@ -179,7 +223,7 @@ async function handleRequest(request) {
         referer: "https://bettergpt.chat/",
         authority: url.host,
       });
-      break;
+      break;*/
     case url.pathname.startsWith("/bjq"):
       url.host = "api.openai.one";
       url.pathname = url.pathname.replace(/^\/bjq\//, "/");
@@ -209,7 +253,7 @@ async function handleRequest(request) {
         authority: url.host,
       });
       break;
-    case url.pathname.startsWith("/kamiya"):
+    /*case url.pathname.startsWith("/kamiya"):
       url.host = "p0.kamiya.dev";
       url.pathname = url.pathname.replace(/^\/kamiya\//, "/");
       switch (true) {
@@ -241,7 +285,7 @@ async function handleRequest(request) {
           });
           break;
       }
-      break;
+      break;*/
     default:
       return httpErrorHandler(404);
       break;
@@ -262,6 +306,27 @@ async function handleRequest(request) {
     return httpErrorHandler(400);
   }
   if (request.method === "POST" && url.pathname.endsWith("/completions") && messageBody) {
+    function transformMessages(messages) {
+      return messages.map((message) => {
+        // Check if 'content' is an array and has structured { type: 'text', text: '...' }
+        if (Array.isArray(message.content) && message.content.every(({ type, text }) => type === "text" && text)) {
+          // Flatten the content
+          message.content = message.content.map(({ text }) => text).join(" ");
+        }
+        return message;
+      });
+    }
+    const bodyJson = JSON.parse(messageBody);
+
+    // Transform the messages within the body
+    bodyJson.messages = transformMessages(bodyJson.messages);
+
+    // Create a new Request object with the transformed body
+    modifiedRequest = new Request(modifiedRequest, {
+      body: JSON.stringify(bodyJson),
+    });
+  }
+  /*if (request.method === "POST" && url.pathname.endsWith("/completions") && messageBody) {
     try {
       const requestBody = JSON.parse(messageBody);
       const messages = requestBody.messages;
@@ -310,7 +375,7 @@ async function handleRequest(request) {
     } catch (error) {
       return httpErrorHandler(400);
     }
-  }
+  }*/
   try {
     const response = await fetch(modifiedRequest);
     const responseStatus = httpErrorHandler(response.status);
